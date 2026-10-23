@@ -8,6 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap">
+<script>
+  // Aplica o tema salvo antes de a página aparecer.
+  try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <style>
 /* Mesma paleta "Marinho" do lucasvieira.tech e do relatório Weather Trends.
    Layout: capa curta e passos numerados, porque o relatório segue a ordem real do trabalho. */
@@ -72,9 +76,11 @@ strong { font-weight: 600; }
 .topo { border-bottom: 1px solid var(--borda); }
 .topo-linha { display: flex; align-items: center; justify-content: space-between; gap: 1rem; height: 3.5rem; }
 .marca { white-space: nowrap; font-family: var(--fonte-mono); font-size: 0.85rem; color: var(--texto); text-decoration: none; }
-.topo nav { display: flex; gap: 0.9rem; font-size: 0.9rem; }
+.topo nav { display: flex; align-items: center; gap: 0.9rem; font-size: 0.9rem; }
 .topo nav a { color: var(--texto-2); text-decoration: none; }
 .topo nav a:hover { color: var(--destaque); }
+.tema { display: grid; place-items: center; width: 2rem; height: 2rem; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--superficie); color: var(--texto-2); cursor: pointer; }
+.tema:hover { color: var(--destaque); }
 
 .capa { padding-block: 3.5rem 2rem; }
 .rotulo { color: var(--destaque); margin-bottom: 0.75rem; }
@@ -214,7 +220,12 @@ pre code[data-lang="url"]::before { content: "endereço"; }
 <header class="topo">
   <div class="container topo-linha">
     <a class="marca" href="https://lucasvieira.tech">[LV] lucasvieira.tech</a>
-    <nav><a href="https://github.com/lucasnvieira/elencos-serie-a">GitHub</a></nav>
+    <nav>
+      <a href="https://github.com/lucasnvieira/elencos-serie-a">GitHub</a>
+      <button class="tema" type="button" aria-label="Alternar tema claro e escuro">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </button>
+    </nav>
   </div>
 </header>
 
@@ -524,6 +535,14 @@ SELECT ?jogador ?espn_id ?altura WHERE {
 
 <div class="tooltip" id="tooltip" role="status" hidden></div>
 
+<script>
+document.querySelector(".tema").addEventListener("click", () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+});
+</script>
 <script>
 // Só agregados: contagens por valor de altura, cobertura por temporada e médias por posição.
 const D = {
