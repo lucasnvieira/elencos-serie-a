@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elencos da Série A · Lucas Vieira</title>
+<meta name="description" content="Como montei uma base com os elencos da Série A de 2016 a 2025: coleta, modelagem, limpeza e a busca pelas alturas que faltavam.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Mesma paleta "Marinho" do lucasvieira.tech e do relatório Weather Trends.
+   Layout: capa curta e passos numerados, porque o relatório segue a ordem real do trabalho. */
+:root {
+  --fundo: #f6f4ef;
+  --superficie: #ffffff;
+  --borda: #e2ded5;
+  --texto: #1b1f27;
+  --texto-2: #5e6573;
+  --texto-3: #85837d;
+  --destaque: #1f3a6b;
+  --destaque-suave: rgb(31 58 107 / 0.08);
+  --grade: #ebe8e1;
+  --eixo: #c3c2b7;
+  /* Séries dos gráficos (validadas para daltonismo nesta superfície). */
+  --s-1: #2a78d6;
+  --s-2: #eb6834;
+  --s-vazio: #cfcabd;
+  --ligacao: #c9c5bb;
+
+  /* Destaque de código, como num editor */
+  --c-palavra: #2f5fc4;
+  --c-funcao: #8a4a12;
+  --c-texto: #2f6b3a;
+  --c-numero: #9a2f5a;
+  --c-comentario: #8a877f;
+  --fonte-titulo: "Space Grotesk", system-ui, sans-serif;
+  --fonte-texto: "Inter", system-ui, sans-serif;
+  --fonte-mono: "JetBrains Mono", ui-monospace, monospace;
+  --raio: 4px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fundo: #17191d; --superficie: #1f2228; --borda: #2c3038; --texto: #e6e8ec; --texto-2: #9aa1ac; --texto-3: #7d838d;
+    --destaque: #8fb2ec; --destaque-suave: rgb(143 178 236 / 0.1); --grade: #2a2e35; --eixo: #3a3f48;
+    --s-1: #3987e5; --s-2: #d95926; --s-vazio: #4a505a; --ligacao: #3d424c;
+    --c-palavra: #8fb2ec; --c-funcao: #e3a86b; --c-texto: #8fcf98; --c-numero: #e58fb4; --c-comentario: #7d838d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --fundo: #17191d; --superficie: #1f2228; --borda: #2c3038; --texto: #e6e8ec; --texto-2: #9aa1ac; --texto-3: #7d838d;
+  --destaque: #8fb2ec; --destaque-suave: rgb(143 178 236 / 0.1); --grade: #2a2e35; --eixo: #3a3f48;
+  --s-1: #3987e5; --s-2: #d95926; --s-vazio: #4a505a; --ligacao: #3d424c;
+    --c-palavra: #8fb2ec; --c-funcao: #e3a86b; --c-texto: #8fcf98; --c-numero: #e58fb4; --c-comentario: #7d838d;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--fundo); color: var(--texto); font-family: var(--fonte-texto); font-size: 1rem; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--fonte-titulo); font-weight: 500; line-height: 1.2; letter-spacing: -0.01em; margin: 0 0 0.5em; text-wrap: balance; }
+h1 { font-size: clamp(2.4rem, 7vw, 4rem); }
+h2 { font-size: clamp(1.5rem, 3vw, 2rem); }
+h3 { font-size: 1.15rem; margin-top: 2rem; }
+p { margin: 0 0 1em; }
+a { color: var(--destaque); text-underline-offset: 3px; }
+strong { font-weight: 600; }
+.container { width: 100%; max-width: 64rem; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+@media (min-width: 720px) { .container { padding-left: max(2rem, env(safe-area-inset-left, 0px)); padding-right: max(2rem, env(safe-area-inset-right, 0px)); } }
+.mono { font-family: var(--fonte-mono); font-size: 0.8rem; letter-spacing: 0.02em; }
+
+.topo { border-bottom: 1px solid var(--borda); }
+.topo-linha { display: flex; align-items: center; justify-content: space-between; gap: 1rem; height: 3.5rem; }
+.marca { white-space: nowrap; font-family: var(--fonte-mono); font-size: 0.85rem; color: var(--texto); text-decoration: none; }
+.topo nav { display: flex; gap: 0.9rem; font-size: 0.9rem; }
+.topo nav a { color: var(--texto-2); text-decoration: none; }
+.topo nav a:hover { color: var(--destaque); }
+
+.capa { padding-block: 3.5rem 2rem; }
+.rotulo { color: var(--destaque); margin-bottom: 0.75rem; }
+.linha-fina { font-size: 1.2rem; color: var(--texto-2); max-width: 44rem; }
+.meta { color: var(--texto-3); }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin: 2rem 0 0.5rem; }
+@media (min-width: 720px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tile { background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 1rem; }
+.tile p { margin: 0; }
+.tile-rotulo { font-size: 0.85rem; color: var(--texto-2); }
+.tile-valor { font-family: var(--fonte-titulo); font-size: 2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tile-valor small { font-size: 1rem; font-weight: 500; color: var(--texto-2); }
+.nota-tiles { font-size: 0.85rem; color: var(--texto-3); }
+
+.passo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.25rem 2rem; padding-block: 3rem 2rem; border-top: 1px solid var(--borda); }
+@media (min-width: 900px) { .passo { grid-template-columns: 4rem minmax(0, 1fr); } }
+.numero { color: var(--destaque); font-size: 0.95rem; margin: 0.35rem 0 0; }
+.passo-corpo { min-width: 0; max-width: 52rem; }
+.legenda { font-size: 0.85rem; color: var(--texto-3); }
+
+pre { background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 1rem; overflow-x: auto; font-size: 0.8rem; line-height: 1.55; margin: 0 0 1.25rem; }
+code { font-family: var(--fonte-mono); font-variant-ligatures: none; }
+p code, li code, td code { font-size: 0.85em; background: var(--destaque-suave); padding: 0.05rem 0.3rem; border-radius: 3px; }
+
+/* Fluxo da coleta */
+.fluxo { list-style: none; padding: 0; margin: 0 0 1.25rem; display: grid; gap: 0.5rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .fluxo { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.fluxo li { position: relative; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 0.75rem 0.85rem; font-size: 0.85rem; }
+.fluxo li strong { display: block; font-family: var(--fonte-titulo); font-weight: 500; font-size: 0.95rem; }
+.fluxo li span { color: var(--texto-2); }
+.fluxo li .mono { display: block; color: var(--destaque); margin-bottom: 0.2rem; font-size: 0.7rem; }
+
+.esquema, .cards-3 { display: grid; gap: 0.75rem; margin: 0 0 1.25rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 720px) { .esquema { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.tabela-card, .card { background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 0.9rem 1rem; min-width: 0; }
+.tabela-card p { margin: 0 0 0.25rem; font-size: 0.9rem; }
+.tabela-card p.mono, .card p.mono { color: var(--destaque); }
+.tabela-card span { font-size: 0.8rem; color: var(--texto-3); }
+.tabela-card.nova { border-style: dashed; }
+.card p:last-child { margin: 0; font-size: 0.95rem; }
+
+.chips { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0; margin: 0 0 1rem; }
+.chips li { font-family: var(--fonte-mono); font-size: 0.75rem; border: 1px solid var(--borda); background: var(--superficie); border-radius: var(--raio); padding: 0.2rem 0.5rem; color: var(--texto-2); }
+
+/* Controles e gráficos */
+.controles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; margin: 1.5rem 0 0.75rem; font-size: 0.9rem; }
+.segmentado { display: inline-flex; border: 1px solid var(--borda); border-radius: var(--raio); overflow: hidden; background: var(--superficie); }
+.segmentado button { font: inherit; font-size: 0.85rem; border: 0; background: none; color: var(--texto-2); padding: 0.4rem 0.75rem; cursor: pointer; }
+.segmentado button + button { border-left: 1px solid var(--borda); }
+.segmentado button[aria-pressed="true"] { background: var(--destaque-suave); color: var(--destaque); font-weight: 500; }
+button:focus-visible { outline: 2px solid var(--destaque); outline-offset: 2px; }
+.grafico { margin: 0 0 1rem; }
+.area-grafico { position: relative; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 0.5rem 0.25rem 0.25rem; }
+.area-grafico svg { display: block; width: 100%; height: auto; }
+.grade-linha { stroke: var(--grade); stroke-width: 1; }
+.linha-base { stroke: var(--eixo); stroke-width: 1; }
+.eixo-texto { font-size: 11px; fill: var(--texto-3); font-family: var(--fonte-mono); }
+.rotulo-dado { font-size: 11px; fill: var(--texto-2); font-family: var(--fonte-mono); }
+.barra-v { fill: var(--s-1); }
+.barra-v.outras { fill: var(--s-2); }
+.alvo { fill: transparent; cursor: pointer; }
+.alvo:hover + .barra-v, .barra-v.ativa { opacity: 0.75; }
+.ligacao { stroke: var(--ligacao); stroke-width: 2; }
+.ponto { stroke: var(--superficie); stroke-width: 2; }
+.ponto.v1, .ponto.outras { fill: var(--s-2); }
+.ponto.v2, .ponto.espn { fill: var(--s-1); }
+.legenda-grafico { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.85rem; color: var(--texto-2); padding: 0.25rem 0.75rem 0.5rem; }
+.legenda-grafico span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.chave { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.chave.c1 { background: var(--s-1); } .chave.c2 { background: var(--s-2); } .chave.vazio { background: var(--s-vazio); }
+
+/* Barras horizontais (fontes) */
+.barras { display: grid; gap: 0.45rem; margin: 0.5rem 0 0.75rem; }
+.barra { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); align-items: center; gap: 0.75rem; font-size: 0.9rem; }
+.barra-trilho { position: relative; height: 22px; }
+.barra-fill { height: 100%; background: var(--s-1); border-radius: 0 4px 4px 0; min-width: 3px; }
+.barra-fill.vazio { background: var(--s-vazio); }
+.barra-valor { position: absolute; top: 50%; transform: translateY(-50%); padding-left: 0.5rem; font-family: var(--fonte-mono); font-size: 0.8rem; color: var(--texto-2); white-space: nowrap; }
+.barra small { display: block; color: var(--texto-3); font-size: 0.75rem; line-height: 1.3; }
+
+.tooltip { position: fixed; z-index: 20; pointer-events: none; background: var(--superficie); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); padding: 0.5rem 0.7rem; font-size: 0.8rem; min-width: 9rem; }
+.tooltip .t-titulo { font-family: var(--fonte-mono); color: var(--texto-2); margin-bottom: 0.2rem; }
+.tooltip .t-linha { display: flex; align-items: center; gap: 0.5rem; font-variant-numeric: tabular-nums; }
+
+.tabela-rolagem { overflow-x: auto; margin: 0 0 1.25rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--borda); vertical-align: top; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--texto-2); }
+td.texto, th.texto { text-align: left; }
+.tabela-dados { margin: 0 0 1.5rem; }
+.tabela-dados summary { cursor: pointer; font-size: 0.9rem; color: var(--destaque); }
+
+/* Caso Jordan */
+.caso { display: grid; gap: 0.75rem; margin: 0 0 1.25rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 720px) { .caso { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ficha { background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 1rem; min-width: 0; }
+.ficha .mono { color: var(--texto-3); margin: 0 0 0.25rem; }
+.ficha h4 { font-family: var(--fonte-titulo); font-weight: 500; font-size: 1.2rem; margin: 0 0 0.5rem; }
+.ficha dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.2rem 0.9rem; margin: 0; font-size: 0.9rem; }
+.ficha dt { color: var(--texto-2); }
+.ficha dd { margin: 0; font-variant-numeric: tabular-nums; }
+.linha-do-tempo { list-style: none; padding: 0; margin: 0 0 1.25rem; border-left: 2px solid var(--borda); }
+.linha-do-tempo li { position: relative; padding: 0 0 0.9rem 1.1rem; }
+.linha-do-tempo li::before { content: ""; position: absolute; left: -6px; top: 0.55rem; width: 10px; height: 10px; border-radius: 50%; background: var(--fundo); border: 2px solid var(--destaque); }
+.linha-do-tempo li.virada::before { background: var(--destaque); }
+.linha-do-tempo .mono { display: block; color: var(--destaque); }
+
+.destaque-bloco { background: var(--destaque-suave); border-radius: var(--raio); padding: 0.9rem 1.1rem; margin: 0 0 1.25rem; }
+.destaque-bloco p:last-child { margin: 0; }
+.passo-corpo ul li { margin-bottom: 0.5rem; }
+.referencias { font-size: 0.9rem; color: var(--texto-2); }
+.rodape { border-top: 1px solid var(--borda); padding-block: 1.5rem 2rem; font-size: 0.85rem; color: var(--texto-3); }
+/* Diagrama do banco */
+.diagrama { overflow-x: auto; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 0.75rem; }
+.diagrama svg { display: block; width: 100%; min-width: 640px; height: auto; }
+.er-caixa { fill: var(--fundo); stroke: var(--eixo); stroke-width: 1; }
+.er-topo { fill: var(--destaque-suave); }
+.er-nome { font-family: var(--fonte-mono); font-size: 12.5px; font-weight: 500; fill: var(--destaque); }
+.er-col { font-family: var(--fonte-mono); font-size: 11.5px; fill: var(--texto-2); }
+.er-chave { fill: var(--texto); font-weight: 500; }
+.er-tag { font-family: var(--fonte-mono); font-size: 10px; fill: var(--destaque); }
+.er-liga { fill: none; stroke: var(--texto-3); stroke-width: 1.5; }
+.er-card { font-family: var(--fonte-mono); font-size: 11px; fill: var(--texto); }
+/* Destaque de sintaxe */
+.tk-palavra { color: var(--c-palavra); font-weight: 500; }
+.tk-funcao { color: var(--c-funcao); }
+.tk-texto { color: var(--c-texto); }
+.tk-numero { color: var(--c-numero); }
+.tk-comentario { color: var(--c-comentario); font-style: italic; }
+pre code[data-lang]::before { content: attr(data-lang); display: block; font-size: 0.7rem; color: var(--texto-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+pre code[data-lang="url"]::before { content: "endereço"; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="container topo-linha">
+    <a class="marca" href="https://lucasvieira.tech">[LV] lucasvieira.tech</a>
+    <nav><a href="https://github.com/lucasnvieira/elencos-serie-a">GitHub</a></nav>
+  </div>
+</header>
+
+<main>
+  <section class="container capa">
+    <p class="mono rotulo">Projeto de coleta e limpeza de dados</p>
+    <h1>Elencos da Série A</h1>
+    <p class="linha-fina">Como montei uma base com os elencos do Brasileirão de 2016 a 2025, da coleta nas páginas da ESPN até a busca, em outras quatro fontes, pelas alturas que faltavam.</p>
+    <p class="mono meta">Outubro de 2026 · Web Scraping · Python · SQL · Wikidata (SPARQL)</p>
+
+    <div class="tiles">
+      <div class="tile"><p class="tile-rotulo">Elencos</p><p class="tile-valor">200</p></div>
+      <div class="tile"><p class="tile-rotulo">Jogadores</p><p class="tile-valor">3.736</p></div>
+      <div class="tile"><p class="tile-rotulo">Linhas de elenco</p><p class="tile-valor">8.588</p></div>
+      <div class="tile"><p class="tile-rotulo">Cobertura de altura</p><p class="tile-valor">96,3<small>%</small></p></div>
+    </div>
+    <p class="nota-tiles">20 clubes por temporada, 10 temporadas. A cobertura é a parte das linhas de elenco com altura conhecida: era 89,9% só com a ESPN.</p>
+  </section>
+
+  <section class="container passo" id="objetivo">
+    <p class="mono numero">01</p>
+    <div class="passo-corpo">
+      <h2>O objetivo</h2>
+      <p>Este projeto nasceu como a fase inicial de outro: um ambiente de treino de SQL com dados de futebol, no mesmo formato do <a href="https://github.com/lucasnvieira/SQLtaco">SQLtaco</a>. Para que os exercícios fizessem sentido, eu precisava de uma base com perguntas interessantes, e escolhi como fio condutor a altura dos jogadores: quem são os mais altos, como a altura varia por posição, por clube e ao longo das temporadas.</p>
+      <p>No meio do caminho, percebi que a construção da base merecia um relatório próprio, visto que coletar, organizar e conferir dados é uma parte grande da rotina de quem trabalha com análise e costuma ficar escondida atrás do resultado final. Sendo assim, esta página conta o processo na ordem em que ele aconteceu, com as decisões, os erros encontrados e o raciocínio por trás de cada correção.</p>
+      <p class="legenda">A base completa não é publicada aqui, por causa dos termos de uso das fontes (passo 10). A página mostra apenas números agregados e poucos exemplos.</p>
+    </div>
+  </section>
+
+  <section class="container passo" id="coleta">
+    <p class="mono numero">02</p>
+    <div class="passo-corpo">
+      <h2>A coleta</h2>
+      <p>A fonte principal são as páginas de elenco da ESPN Brasil, uma por clube e por temporada, coletadas em outubro de 2026 com scripts em Python, usando as bibliotecas requests, para as requisições às páginas, e Selenium, para as páginas que dependem do navegador. Antes da coleta, fiz um mapeamento simples das requisições que o site faz, para entender onde estavam os dados de cada elenco. O endereço segue um padrão, o que permitiu montar a lista das 200 páginas (20 clubes em 10 temporadas) antes de visitar qualquer uma delas:</p>
+<pre><code data-lang="url">espn.com.br/futebol/time/elenco/_/id/&lt;time_id&gt;/liga/BRA.1/temporada/&lt;ano&gt;</code></pre>
+      <p>A lista de páginas também se mostrou útil por outro motivo: em cada temporada, os clubes aparecem na ordem da classificação final. Por tal razão, ela também virou a tabela de classificação, com uma conferência automática de que o primeiro clube de cada ano é o campeão conhecido (Palmeiras em 2016, Corinthians em 2017, e assim por diante até o Flamengo em 2025).</p>
+      <ol class="fluxo" aria-label="Etapas da construção da base">
+        <li><span class="mono">coleta</span><strong>200 páginas</strong><span>elencos da ESPN, 2016 a 2025</span></li>
+        <li><span class="mono">consolidação</span><strong>1 arquivo</strong><span>8.588 linhas, uma por jogador em cada elenco</span></li>
+        <li><span class="mono">modelagem</span><strong>4 tabelas</strong><span>ligadas por ID, com conferências (versão 1)</span></li>
+        <li><span class="mono">complementos</span><strong>3 arquivos à mão</strong><span>estados, sedes dos clubes e alturas de outras fontes</span></li>
+        <li><span class="mono">versão 2</span><strong>5 tabelas</strong><span>96,3% das linhas com altura</span></li>
+      </ol>
+      <h3>Cinco elencos incompletos</h3>
+      <p>Cinco páginas vieram com elencos claramente menores do que deveriam: Palmeiras, Grêmio, Bahia e São Paulo em 2020 e Chapecoense em 2016. No caso da Chapecoense, 2016 foi o ano do acidente aéreo que vitimou grande parte do elenco, em novembro, o que pode ter influenciado o registro desse elenco. Com essa evidência, completei esses elencos com outras páginas da própria ESPN, as escalações das partidas (os quatro de 2020) e o elenco da Copa do Brasil (Chapecoense). São 196 linhas, e todas carregam a coluna <code>fonte_elenco</code>, para que qualquer análise possa separá-las.</p>
+      <div class="tabela-rolagem">
+        <table>
+          <thead><tr><th>fonte_elenco</th><th>linhas</th><th class="texto">de onde vem</th></tr></thead>
+          <tbody>
+            <tr><td><code>elenco_brasileirao</code></td><td>8.392</td><td class="texto">página de elenco da Série A</td></tr>
+            <tr><td><code>escalacoes_partidas</code></td><td>173</td><td class="texto">escalações dos jogos de 2020 (4 clubes)</td></tr>
+            <tr><td><code>elenco_copa_do_brasil</code></td><td>23</td><td class="texto">elenco da Chapecoense na Copa do Brasil de 2016</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="legenda">Estar no elenco não quer dizer ter jogado. A ESPN lista os inscritos de cada clube, e essa lista corresponde, sobretudo, aos inscritos no começo da temporada, que no calendário brasileiro coincide com o começo do ano. A coleta também trouxe dados das partidas, mas eles se mostraram inconsistentes e, por isso, decidi não usá-los; a base não tem minutos nem escalações, fora dos quatro elencos completados acima.</p>
+    </div>
+  </section>
+
+  <section class="container passo" id="modelagem">
+    <p class="mono numero">03</p>
+    <div class="passo-corpo">
+      <h2>Do arquivo único às tabelas</h2>
+      <p>A coleta gera um arquivo só, em que cada linha repete o nome do clube e o cadastro inteiro do jogador. Isso é prático para ler, mas ruim para consultar: se a altura de um jogador mudasse, ela teria de ser corrigida em todas as linhas dele. Separei o arquivo em tabelas ligadas por ID, que é como os dados costumam estar organizados num banco de verdade e o que torna os JOINs necessários nos exercícios.</p>
+      <div class="esquema">
+        <div class="tabela-card"><p class="mono">elencos</p><p>temporada · time_id · jogador_id · fonte_elenco</p><span>8.588 linhas, uma por jogador em cada elenco</span></div>
+        <div class="tabela-card"><p class="mono">jogadores</p><p>jogador_id · nome · posição · altura · fonte_altura · nacionalidade</p><span>3.736 linhas</span></div>
+        <div class="tabela-card"><p class="mono">clubes</p><p>time_id · nome · cidade · uf</p><span>34 clubes que passaram pela Série A</span></div>
+        <div class="tabela-card"><p class="mono">classificacao</p><p>temporada · time_id · posicao_final</p><span>200 linhas, da ordem das páginas</span></div>
+        <div class="tabela-card nova"><p class="mono">estados</p><p>uf · estado · região</p><span>27 UFs, inclusive as 15 que não tiveram clube</span></div>
+      </div>
+      <figure class="grafico">
+        <div class="diagrama"><svg viewBox="0 0 792 342" role="img" aria-label="Diagrama do banco: elencos liga jogadores e clubes; clubes liga a estados; classificacao liga a clubes"><rect x="10" y="20" width="166" height="146" rx="4" class="er-caixa"/><rect x="10" y="20" width="166" height="26" rx="4" class="er-topo"/><rect x="10" y="42" width="166" height="4" class="er-topo"/><text x="20" y="37" class="er-nome">jogadores</text><text x="20" y="60" class="er-col er-chave">jogador_id</text><text x="168" y="60" text-anchor="end" class="er-tag">PK</text><text x="20" y="79" class="er-col">jogador_nome</text><text x="20" y="98" class="er-col">posicao</text><text x="20" y="117" class="er-col">altura_m</text><text x="20" y="136" class="er-col">fonte_altura</text><text x="20" y="155" class="er-col">nacionalidade</text><rect x="212" y="20" width="166" height="127" rx="4" class="er-caixa"/><rect x="212" y="20" width="166" height="26" rx="4" class="er-topo"/><rect x="212" y="42" width="166" height="4" class="er-topo"/><text x="222" y="37" class="er-nome">elencos</text><text x="222" y="60" class="er-col er-chave">temporada</text><text x="370" y="60" text-anchor="end" class="er-tag">PK</text><text x="222" y="79" class="er-col er-chave">time_id</text><text x="370" y="79" text-anchor="end" class="er-tag">PK FK</text><text x="222" y="98" class="er-col er-chave">jogador_id</text><text x="370" y="98" text-anchor="end" class="er-tag">PK FK</text><text x="222" y="117" class="er-col">multi_clube_temporada</text><text x="222" y="136" class="er-col">fonte_elenco</text><rect x="414" y="20" width="166" height="127" rx="4" class="er-caixa"/><rect x="414" y="20" width="166" height="26" rx="4" class="er-topo"/><rect x="414" y="42" width="166" height="4" class="er-topo"/><text x="424" y="37" class="er-nome">clubes</text><text x="424" y="60" class="er-col er-chave">time_id</text><text x="572" y="60" text-anchor="end" class="er-tag">PK</text><text x="424" y="79" class="er-col">time_nome</text><text x="424" y="98" class="er-col">time_slug</text><text x="424" y="117" class="er-col">cidade</text><text x="424" y="136" class="er-col">uf</text><text x="572" y="136" text-anchor="end" class="er-tag">FK</text><rect x="616" y="20" width="166" height="89" rx="4" class="er-caixa"/><rect x="616" y="20" width="166" height="26" rx="4" class="er-topo"/><rect x="616" y="42" width="166" height="4" class="er-topo"/><text x="626" y="37" class="er-nome">estados</text><text x="626" y="60" class="er-col er-chave">uf</text><text x="774" y="60" text-anchor="end" class="er-tag">PK</text><text x="626" y="79" class="er-col">estado</text><text x="626" y="98" class="er-col">regiao</text><rect x="414" y="214" width="166" height="89" rx="4" class="er-caixa"/><rect x="414" y="214" width="166" height="26" rx="4" class="er-topo"/><rect x="414" y="236" width="166" height="4" class="er-topo"/><text x="424" y="231" class="er-nome">classificacao</text><text x="424" y="254" class="er-col er-chave">temporada</text><text x="572" y="254" text-anchor="end" class="er-tag">PK</text><text x="424" y="273" class="er-col er-chave">time_id</text><text x="572" y="273" text-anchor="end" class="er-tag">PK FK</text><text x="424" y="292" class="er-col">posicao_final</text><path d="M176,55.5 H194.0 V93.5 H212" class="er-liga"/><text x="180" y="51.5" class="er-card">1</text><text x="208" y="89.5" text-anchor="end" class="er-card">N</text><path d="M414,55.5 H396.0 V74.5 H378" class="er-liga"/><text x="410" y="51.5" text-anchor="end" class="er-card">1</text><text x="382" y="70.5" class="er-card">N</text><path d="M616,55.5 H598.0 V131.5 H580" class="er-liga"/><text x="612" y="51.5" text-anchor="end" class="er-card">1</text><text x="584" y="127.5" class="er-card">N</text><path d="M497,147 V214" class="er-liga"/><text x="503" y="160" class="er-card">1</text><text x="503" y="209" class="er-card">N</text><text x="10" y="332" class="er-col">PK chave primária · FK chave estrangeira · 1 e N: um registro de um lado, vários do outro</text></svg></div>
+        <figcaption class="legenda">O modelo relacional da versão 2. Cada linha de <code>elencos</code> liga um jogador a um clube numa temporada; <code>clubes</code> aponta para o estado da sede, e <code>classificacao</code> guarda a posição final de cada clube em cada ano.</figcaption>
+      </figure>
+      <h3>Escolhas de modelagem</h3>
+      <ul>
+        <li><strong>Um banco relacional.</strong> Os dados ficam em tabelas ligadas por chaves primárias (PK, que identificam cada linha) e estrangeiras (FK, que apontam para a linha de outra tabela). A base sai como arquivo SQLite, com as chaves declaradas, e o app roda as mesmas tabelas no DuckDB, ambos bancos relacionais.</li>
+        <li><strong>Transações ACID.</strong> SQLite e DuckDB seguem o modelo ACID (atomicidade, consistência, isolamento e durabilidade), ou seja, uma gravação acontece por inteiro ou não acontece. O script aproveita isso ao gravar todas as tabelas numa única transação, confirmada só no fim, de modo que o arquivo nunca fica pela metade. Como a base é só de leitura no app, a propriedade que mais pesa aqui é a consistência; por tal razão, o script também confere as ligações por conta própria, visto que o SQLite só aplica as chaves estrangeiras quando essa verificação é ativada.</li>
+        <li><strong>Os IDs são os da ESPN.</strong> Em vez de criar uma numeração própria, mantive os IDs da fonte, o que permite voltar à página de origem de cada jogador e clube. O custo é que o ID também não resolve tudo: quando dois cadastros têm o mesmo nome, só o contexto diz se são a mesma pessoa (passo 08).</li>
+        <li><strong>Chaves compostas.</strong> Uma linha de elenco só é única pela combinação de temporada, clube e jogador, e a classificação, pela de temporada e clube. Nenhuma coluna sozinha basta.</li>
+        <li><strong>O cadastro do jogador fica num lugar só.</strong> Posição, altura e nacionalidade ficam em <code>jogadores</code>, e não repetidas em cada elenco. A contrapartida é que esses atributos são os atuais, e não os da época. Jogadores mais novos, que subiram da base dos clubes, podem ter alturas diferentes entre os anos e, por isso, decidi usar os dados mais atuais.</li>
+        <li><strong>As 27 UFs, e não só as 12 com clube.</strong> Assim, perguntas como "quais estados nunca tiveram clube na Série A?" podem ser respondidas com um <code>LEFT JOIN</code>.</li>
+      </ul>
+      <h3>O nome não identifica o jogador</h3>
+      <p>Uma das primeiras consultas mostrou por que as ligações têm de ser feitas pelo ID: 353 nomes aparecem em mais de um jogador.</p>
+<pre><code data-lang="sql">SELECT jogador_nome, COUNT(*) AS jogadores
+FROM jogadores
+GROUP BY jogador_nome
+HAVING COUNT(*) &gt; 1
+ORDER BY jogadores DESC;</code></pre>
+      <ul class="chips" aria-label="Nomes mais repetidos">
+        <li>Vitinho · 14</li><li>Gabriel · 12</li><li>João Pedro · 11</li><li>Pedrinho · 10</li><li>Paulinho · 9</li><li>Pablo · 9</li><li>Felipe · 9</li><li>Yago · 8</li>
+      </ul>
+      <p>Ou seja, uma consulta que agrupasse por nome juntaria 14 jogadores diferentes num só Vitinho. Esse detalhe voltou a aparecer, de forma mais sutil, na busca pelas alturas (passo 08).</p>
+    </div>
+  </section>
+
+  <section class="container passo" id="limpeza">
+    <p class="mono numero">04</p>
+    <div class="passo-corpo">
+      <h2>Limpeza e conferências</h2>
+      <p>O script que monta as tabelas usa só a biblioteca padrão do Python e para na primeira conferência que falha. Preferi assim a corrigir problemas em silêncio, visto que um erro que interrompe o processo é encontrado na hora, enquanto um erro corrigido sem aviso pode passar despercebido até a análise.</p>
+      <div class="cards-3">
+        <article class="card">
+          <p class="mono">Espaços no fim</p>
+          <p>Dois nomes vinham da ESPN com um espaço no fim ("Wanderson ", "Júnior "). Num <code>GROUP BY</code>, o mesmo texto viraria dois nomes diferentes. Todo texto passa por um <code>strip()</code>.</p>
+        </article>
+        <article class="card">
+          <p class="mono">Vazios viram NULL</p>
+          <p>687 jogadores sem altura e 120 sem nacionalidade. Um texto vazio não é o mesmo que um dado ausente, e só o NULL é tratado como ausente pelo SQL.</p>
+        </article>
+        <article class="card">
+          <p class="mono">Cadastro único</p>
+          <p>Posição, altura e nacionalidade aparecem em cada linha do arquivo original. O script confere que são iguais em todas as linhas do jogador antes de guardá-las uma só vez.</p>
+        </article>
+      </div>
+<pre><code data-lang="python"># trechos de scripts/preparar_app.py
+assert cadastro == espn, f"atributo diferente entre tabelas: {jid}"
+assert len(regs) == 20, f"{ano}: {len(regs)} clubes"
+assert regs[0]["time_slug"] == CAMPEOES[ano], f"{ano}: 1º colocado {regs[0]['time_slug']}"
+assert jogadores[jid][3] is None, f"alturas.csv: a ESPN já informa a altura de {jid}"
+assert 1.50 &lt;= altura &lt;= 2.10, f"alturas.csv: altura fora do esperado para {jid}: {altura}"</code></pre>
+      <p>Além disso, o script confere que as chaves não se repetem e que todo ID de uma tabela existe na tabela a que ele aponta. A base sai em três formatos: CSV, um arquivo SQLite com as chaves declaradas e os dados embutidos no app.</p>
+    </div>
+  </section>
+
+  <section class="container passo" id="polegadas">
+    <p class="mono numero">05</p>
+    <div class="passo-corpo">
+      <h2>A altura vem em polegadas</h2>
+      <p>Ao olhar a distribuição das alturas, algo não parecia natural: entre 1,57 m e 2,03 m, a ESPN tem apenas <strong>19 valores diferentes</strong>, e alturas comuns como 1,79 m ou 1,81 m simplesmente não existem. A explicação é que a ESPN guarda a altura em polegadas inteiras (1 polegada = 2,54 cm) e converte para metros na hora de exibir. Entre 1,78 m (70 polegadas) e 1,80 m (71 polegadas), não há nada. A ESPN é uma empresa americana, e esse é o padrão dos esportes nos Estados Unidos, que medem a altura em pés e polegadas; quem já assistiu a um jogo da NBA provavelmente já tentou converter um 6'8" (2,03 m) para entender a altura de algum jogador.</p>
+      <div class="controles">
+        <div class="segmentado" role="group" aria-label="Fonte das alturas">
+          <button type="button" data-fonte="espn" aria-pressed="true">ESPN</button>
+          <button type="button" data-fonte="outras" aria-pressed="false">Outras fontes</button>
+        </div>
+      </div>
+      <figure class="grafico">
+        <div class="area-grafico" id="grafico-alturas"></div>
+        <figcaption class="legenda" id="legenda-alturas"></figcaption>
+      </figure>
+      <p>Na prática, isso tem três consequências. Médias, medianas e faixas funcionam bem, mas comparações de valor exato não fazem sentido. Cada altura da ESPN carrega uma incerteza de cerca de 1,3 cm para cada lado, já que não se sabe se o valor real foi arredondado para cima ou para baixo. E, ao misturar fontes, uma altura em centímetros traz uma precisão, em teoria, que a ESPN não tem; por isso cada altura da base guarda a sua <code>fonte_altura</code>.</p>
+<pre><code data-lang="sql">-- alturas fora da grade de polegadas: só podem vir de outra fonte
+SELECT fonte_altura, COUNT(*) AS jogadores
+FROM jogadores
+WHERE altura_m IS NOT NULL
+  AND ABS(altura_m - ROUND(ROUND(altura_m / 0.0254) * 0.0254, 2)) &gt; 0.001
+GROUP BY fonte_altura;</code></pre>
+      <p class="legenda">Resultado: nenhuma da ESPN, e 227 das 403 alturas de outras fontes.</p>
+    </div>
+  </section>
+
+  <section class="container passo" id="faltas">
+    <p class="mono numero">06</p>
+    <div class="passo-corpo">
+      <h2>Onde faltam alturas</h2>
+      <p>Na primeira versão da base, só com dados da ESPN, 687 dos 3.736 jogadores (18%) não tinham altura. A falta não era uniforme: de 2016 a 2023, ficava entre 3% e 9% das linhas de elenco, e subia para 19% em 2024 e 23% em 2025. Esse detalhe importa, porque uma comparação entre temporadas poderia confundir a queda de cobertura com uma mudança na altura dos jogadores.</p>
+      <figure class="grafico">
+        <div class="area-grafico">
+          <div class="legenda-grafico"><span><i class="chave c2"></i>Versão 1 (só ESPN)</span><span><i class="chave c1"></i>Versão 2 (com outras fontes)</span></div>
+          <div id="grafico-cobertura"></div>
+        </div>
+        <figcaption class="legenda">Parte das linhas de elenco com altura conhecida, por temporada. O eixo começa em 70%.</figcaption>
+      </figure>
+      <details class="tabela-dados">
+        <summary>Ver os números por temporada</summary>
+        <div class="tabela-rolagem" id="tabela-cobertura"></div>
+      </details>
+      <p>Os elencos com mais vazios eram recentes: Cuiabá 2024 (28 de 49 jogadores sem altura), Red Bull Bragantino 2024 (21 de 53), Bahia 2025 (17 de 47) e Vitória 2025 (16 de 49). Por posição, a falta era parecida, de 16% entre os atacantes a 20% entre os defensores, o que sugere que o problema estava no cadastro de jogadores recentes, e não num tipo de jogador.</p>
+    </div>
+  </section>
+
+  <section class="container passo" id="fontes">
+    <p class="mono numero">07</p>
+    <div class="passo-corpo">
+      <h2>Completando a altura com outras fontes</h2>
+      <p>Antes de buscar, defini as regras: uma altura de outra fonte <strong>só preenche um vazio</strong> e nunca corrige a ESPN; toda altura nova vai para um arquivo à parte, com a fonte, o link consultado e a data; a altura tem de estar entre 1,50 m e 2,10 m; e <strong>nenhuma altura é estimada</strong>. Sem uma fonte citável, o jogador fica sem altura. O script recusa qualquer linha que fuja dessas regras.</p>
+      <p>A ordem das fontes seguiu o custo de cada consulta, da mais barata para a mais trabalhosa:</p>
+      <ol>
+        <li><strong>Wikidata</strong>, base de conhecimento aberta da Wikimedia, consultada pelo serviço oficial de consultas SPARQL, e não por raspagem. Primeiro pelo próprio ID da ESPN, que o Wikidata registra para alguns jogadores (propriedade P3681), e depois por nome, clube e período no clube, aceitando só quando havia um único candidato.</li>
+        <li><strong>Wikipedia</strong>, em inglês e depois em português, dentro da categoria de jogadores de cada clube. Para aceitar, o nome tinha de bater e a ficha tinha de mostrar o clube nos anos da temporada.</li>
+        <li><strong>Transfermarkt</strong>, site especializado em elencos e transferências, pela página de elenco de cada clube em cada temporada (140 elencos), para os jogadores que ainda faltavam.</li>
+      </ol>
+<pre><code data-lang="sparql"># Wikidata: jogadores com o ID da ESPN e a altura (simplificado)
+SELECT ?jogador ?espn_id ?altura WHERE {
+  VALUES ?espn_id { "162409" "304699" ... }
+  ?jogador wdt:P3681 ?espn_id .           # ESPN FC player ID
+  OPTIONAL { ?jogador wdt:P2048 ?altura } # altura
+}</code></pre>
+      <div class="barras" id="barras-fontes" role="img" aria-label="Jogadores por fonte da altura na versão 2"></div>
+      <p class="legenda">Jogadores por fonte da altura na versão final. Os outros 3.049 têm a altura da ESPN.</p>
+      <p>O Wikidata resolveu poucos casos (25), mas foi a fonte mais segura e a mais rápida, porque poucas consultas cobriram a fila inteira. A maior parte veio da Wikipedia em inglês e do Transfermarkt. Ao todo, 403 jogadores ganharam altura, e a cobertura das linhas de elenco subiu de 89,9% para 96,3%; em 2025, de 76,7% para 90,4%.</p>
+      <h3>As fontes concordam com a ESPN?</h3>
+      <p>Uma forma de conferir se as alturas novas são plausíveis é compará-las, por posição, com as da ESPN. As médias das outras fontes ficam de 0,5 a 2,1 cm acima, sempre na mesma ordem: goleiros, defensores, atacantes e meio-campistas. A diferença é pequena e pode vir do arredondamento da ESPN ou de as outras fontes terem mais jogadores jovens.</p>
+      <figure class="grafico">
+        <div class="area-grafico">
+          <div class="legenda-grafico"><span><i class="chave c1"></i>ESPN</span><span><i class="chave c2"></i>Outras fontes</span></div>
+          <div id="grafico-posicao"></div>
+        </div>
+        <figcaption class="legenda">Altura média por posição, contando cada jogador uma vez. Passe o mouse sobre um ponto para ver quantos jogadores entram na média.</figcaption>
+      </figure>
+      <p>Há também 58 alturas com evidência mais fraca, em que a ficha confirmava só uma das temporadas do jogador ou o nome batia apenas em parte. Elas ficaram na base, marcadas, para que uma análise mais conservadora possa retirá-las.</p>
+    </div>
+  </section>
+
+  <section class="container passo" id="jordan">
+    <p class="mono numero">08</p>
+    <div class="passo-corpo">
+      <h2>Quando o nome engana: o caso Jordan</h2>
+      <p>Na conferência da busca automática, um caso mostrou com clareza o limite de identificar jogadores pelo nome. Dois IDs diferentes da ESPN apontavam para a mesma pessoa nas outras fontes, e todas as evidências pareciam confirmar que se tratava de um cadastro duplicado:</p>
+      <ol class="linha-do-tempo">
+        <li><span class="mono">ESPN</span>Dois "Jordan" em 2021: um atacante do Ceará (ID 303479) e um defensor da Chapecoense (ID 270380).</li>
+        <li><span class="mono">busca automática</span>A mesma página da Wikipedia ("Jordan, footballer, born 1999", 1,90 m) casou com os dois IDs, e o mesmo jogador do Transfermarkt aparecia nos elencos do Ceará e da Chapecoense em 2021. A leitura natural era a de um jogador que passou pelos dois clubes no mesmo ano, e os IDs foram unificados.</li>
+        <li><span class="mono">sinais contrários</span>As posições na ESPN eram diferentes, e o elenco do Ceará 2021 no Transfermarkt tinha um segundo Jordan, de 1,80 m.</li>
+        <li class="virada"><span class="mono">conferência manual</span>Cruzei o caso no ogol e encontrei uma reportagem do ge Ceará sobre o zagueiro. Eram duas pessoas.</li>
+      </ol>
+      <div class="caso">
+        <div class="ficha">
+          <p class="mono">ID 270380</p>
+          <h4>Anderson Jordan</h4>
+          <dl><dt>posição</dt><dd>zagueiro</dd><dt>altura</dt><dd>1,90 m (Wikipedia, Transfermarkt)</dd><dt>2021</dt><dd>Ceará e Chapecoense</dd></dl>
+        </div>
+        <div class="ficha">
+          <p class="mono">ID 303479</p>
+          <h4>Jordan</h4>
+          <dl><dt>posição</dt><dd>atacante</dd><dt>altura</dt><dd>1,80 m (conferida no ogol)</dd><dt>2021</dt><dd>Ceará</dd></dl>
+        </div>
+      </div>
+      <p>A unificação foi desfeita, e cada ID voltou a ter a sua linha de elenco e a sua altura. Como curiosidade, segundo a reportagem do ge, o nome do zagueiro, incomum no futebol brasileiro, foi inspirado em Michael Jordan, do basquete.</p>
+      <div class="destaque-bloco">
+        <p>Nome, clube e temporada batendo, e até a mesma página em duas fontes diferentes, não bastaram para identificar o jogador. O que desfez o engano foi o contexto: a posição diferente nos dois cadastros, um segundo homônimo no elenco e fontes que contam a história do jogador. Por isso a base guarda, em cada altura, a fonte e a forma como o jogador foi identificado; quando uma conferência mais cuidadosa contradiz a busca automática, o caso pode ser encontrado e corrigido.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="container passo" id="revisao">
+    <p class="mono numero">09</p>
+    <div class="passo-corpo">
+      <h2>A revisão manual</h2>
+      <p>Depois da busca automática, revisei os casos em que uma altura destoava do esperado ou em que as fontes discordavam entre si. Três jogadores ficaram com uma altura conferida à mão, registrada como <code>manual</code>, com as fontes consultadas:</p>
+      <div class="tabela-rolagem">
+        <table>
+          <thead><tr><th>jogador</th><th class="texto">o que chamou a atenção</th><th>altura final</th></tr></thead>
+          <tbody>
+            <tr><td>Marcelo, goleiro, Cruzeiro 2024 e 2025</td><td class="texto">A Wikipedia em inglês dava 1,79 m, baixo para um goleiro.</td><td>1,91 m</td></tr>
+            <tr><td>Pablo, Vitória 2024</td><td class="texto">O Transfermarkt dava 1,65 m; as páginas da Wikipedia, 1,75 m. Sofascore, Wikipedia e ogol concordam em 1,75 m.</td><td>1,75 m</td></tr>
+            <tr><td>Jordan, Ceará 2021</td><td class="texto">O homônimo do passo 08.</td><td>1,80 m</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Os 284 que ficaram sem altura</h3>
+      <p>Ao fim da busca, 284 jogadores continuaram sem altura. Inspecionei a lista, pesquisei parte dos nomes em mecanismos de busca e os cruzei com sites especializados de clubes grandes, como a FlaPress, do Flamengo. A conclusão foi que boa parte deles são jogadores da base, inscritos por exigência do regulamento, que provavelmente nem entraram em campo nas temporadas citadas e não são conhecidos do público em geral. Ou seja, não há uma fonte pública confiável para a altura deles, e continuar procurando custaria muito para pouco ganho. Eles seguem na base, com a altura em NULL, e toda comparação de altura entre grupos mostra a cobertura ao lado.</p>
+    </div>
+  </section>
+
+  <section class="container passo" id="licencas">
+    <p class="mono numero">10</p>
+    <div class="passo-corpo">
+      <h2>Fontes, licenças e por que a base não está publicada</h2>
+      <p>Cada fonte usada tem uma regra diferente para o reúso dos dados, e isso definiu o que esta página pode mostrar. Wikidata e Wikipedia têm licenças abertas, mas a ESPN, de onde vêm os elencos e a maior parte das alturas, e o Transfermarkt não autorizam a redistribuição do que publicam.</p>
+      <div class="tabela-rolagem">
+        <table>
+          <thead><tr><th>fonte</th><th class="texto">o que forneceu</th><th class="texto">licença ou termos</th></tr></thead>
+          <tbody>
+            <tr><td>ESPN Brasil</td><td class="texto">os 200 elencos, posições, nacionalidades e 3.049 alturas</td><td class="texto">termos de uso não autorizam a redistribuição</td></tr>
+            <tr><td>Transfermarkt</td><td class="texto">186 alturas</td><td class="texto">termos de uso não autorizam a redistribuição</td></tr>
+            <tr><td>Wikipedia (en e pt)</td><td class="texto">189 alturas</td><td class="texto">CC BY-SA 4.0, com atribuição</td></tr>
+            <tr><td>Wikidata</td><td class="texto">25 alturas</td><td class="texto">CC0, domínio público</td></tr>
+            <tr><td>Conferência manual</td><td class="texto">3 alturas (ogol, Sofascore, Wikipedia)</td><td class="texto">só o valor conferido, com as fontes citadas</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Sendo assim, decidi publicar o método e o código, mas não a base completa. Esta página mostra apenas contagens, médias e poucos exemplos individuais, necessários para explicar o processo. O projeto tem caráter educacional, e nomear as fontes faz parte dele: saber de onde vem cada dado e o que se pode fazer com ele é tão importante quanto saber coletá-lo.</p>
+      <p>A coluna <code>fonte_altura</code> foi pensada também para isso. Uma futura versão pública do app de treino pode filtrar a base e manter só o que vem de fontes abertas, o que exige antes testar quanto da base o Wikidata e a Wikipedia conseguem cobrir sozinhos.</p>
+    </div>
+  </section>
+
+  <section class="container passo" id="limitacoes">
+    <p class="mono numero">11</p>
+    <div class="passo-corpo">
+      <h2>Limitações e próximos passos</h2>
+      <ul>
+        <li><strong>A altura é o cadastro atual</strong>, e não a da época. Para adultos isso muda pouco, mas um jogador que subiu da base em 2016 pode ter crescido depois.</li>
+        <li><strong>A posição tem só quatro grupos</strong> (goleiro, defensor, meio-campista e atacante). Zagueiros e laterais ficam juntos em "defensor", o que esconde a diferença de altura entre eles. Separar os dois exigiria outra fonte.</li>
+        <li><strong>Elenco não é escalação.</strong> A base não diz quem jogou nem por quanto tempo, e o elenco reflete principalmente os inscritos no começo do ano, sem as mudanças ao longo da temporada. Ou seja, uma média "por elenco" inclui jogadores que talvez nunca tenham entrado em campo.</li>
+        <li><strong>A cobertura de 2024 e 2025 continua menor</strong> (92,3% e 90,4%, contra 96% a 99% nos outros anos).</li>
+        <li>A temporada de 2026 foi coletada, mas fica de fora, por estar em andamento.</li>
+        <li>Este é um projeto educacional. Outras escolhas, tal como outra fonte principal, outra regra para aceitar um casamento de nomes ou a exclusão das alturas de evidência mais fraca, mudariam alguns dos números desta página. As escolhas estão explicadas ao longo do texto para que possam ser questionadas e refeitas.</li>
+      </ul>
+      <h3>Referências</h3>
+      <ul class="referencias">
+        <li>ESPN Brasil, páginas de elenco do Campeonato Brasileiro Série A, 2016 a 2025. <a href="https://www.espn.com.br/futebol/">espn.com.br</a>. Acesso em outubro de 2026.</li>
+        <li>Wikidata, serviço de consultas SPARQL. <a href="https://query.wikidata.org">query.wikidata.org</a>. Dados sob CC0.</li>
+        <li>Wikipedia, em inglês e em português. Textos sob CC BY-SA 4.0.</li>
+        <li>Transfermarkt, páginas de elenco detalhado por temporada. <a href="https://www.transfermarkt.com.br">transfermarkt.com.br</a>.</li>
+        <li>ogol, Sofascore e ge Ceará, usados na conferência manual de casos específicos.</li>
+        <li>IBGE, divisão regional do Brasil (regiões das unidades da federação).</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="container rodape">
+  <p>Lucas Vieira · <a href="https://lucasvieira.tech">lucasvieira.tech</a> · <a href="https://github.com/lucasnvieira/elencos-serie-a">código</a> · projeto educacional</p>
+</footer>
+
+<div class="tooltip" id="tooltip" role="status" hidden></div>
+
+<script>
+// Só agregados: contagens por valor de altura, cobertura por temporada e médias por posição.
+const D = {
+  espn: [[1.57,1],[1.60,9],[1.63,4],[1.65,41],[1.68,64],[1.70,178],[1.73,239],[1.75,448],[1.78,450],[1.80,336],[1.83,376],[1.85,266],[1.88,313],[1.91,153],[1.93,109],[1.96,42],[1.98,16],[2.01,1],[2.03,3]],
+  outras: [[1.57,1],[1.62,1],[1.64,1],[1.65,2],[1.67,2],[1.68,4],[1.69,3],[1.70,12],[1.71,6],[1.72,13],[1.73,12],[1.74,9],[1.75,25],[1.76,18],[1.77,18],[1.78,24],[1.79,15],[1.80,22],[1.81,18],[1.82,20],[1.83,20],[1.84,17],[1.85,24],[1.86,13],[1.87,24],[1.88,13],[1.89,13],[1.90,14],[1.91,3],[1.92,11],[1.93,6],[1.94,6],[1.95,4],[1.96,4],[1.98,1],[2.00,1],[2.03,2],[2.08,1]],
+  // temporada, linhas, com altura na v1, com altura na v2
+  cobertura: [[2016,821,747,801],[2017,825,771,805],[2018,807,768,794],[2019,751,728,747],[2020,802,745,780],[2021,947,875,927],[2022,899,822,866],[2023,918,832,893],[2024,925,748,854],[2025,893,685,807]],
+  fontes: [["Wikidata",25,"consultas SPARQL"],["Wikipedia (en)",162,""],["Wikipedia (pt)",27,""],["Transfermarkt",186,"140 elencos"],["Conferência manual",3,""],["Sem altura",284,"fora da busca"]],
+  // posição, [jogadores, média] ESPN, [jogadores, média] outras fontes
+  posicao: [["Goleiro",[288,1.901],[29,1.922]],["Defensor",[904,1.819],[146,1.832]],["Atacante",[872,1.786],[94,1.791]],["Meio-campista",[985,1.774],[134,1.786]]],
+};
+
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+const num = (v, d) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const metros = (v) => num(v, 2) + " m";
+
+const largura = (box) => Math.round(Math.min(720, Math.max(300, box.clientWidth - 8)));
+const tip = document.getElementById("tooltip");
+function mostrar(titulo, linhas, ev) {
+  tip.replaceChildren();
+  const t = document.createElement("div"); t.className = "t-titulo"; t.textContent = titulo; tip.appendChild(t);
+  for (const l of linhas) { const d = document.createElement("div"); d.className = "t-linha"; d.textContent = l; tip.appendChild(d); }
+  tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const esconder = () => { tip.hidden = true; };
+
+// ---------- 05: distribuição das alturas ----------
+function graficoAlturas(fonte) {
+  const box = document.getElementById("grafico-alturas");
+  box.replaceChildren();
+  const W = largura(box), H = W < 500 ? 220 : 260, m = { t: 14, r: 12, b: 30, l: 40 };
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Jogadores por altura" }, box);
+  const dados = D[fonte];
+  const xMin = 1.555, xMax = 2.095;
+  const x = (v) => m.l + (v - xMin) / (xMax - xMin) * (W - m.l - m.r);
+  const yMax = fonte === "espn" ? 500 : 30, passo = fonte === "espn" ? 100 : 5;
+  const y = (v) => H - m.b - v / yMax * (H - m.t - m.b);
+  for (let v = 0; v <= yMax; v += passo) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: v ? "grade-linha" : "linha-base" }, s);
+    el("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end", class: "eixo-texto" }, s).textContent = v;
+  }
+  for (let v = 1.6; v <= 2.0001; v += 0.1) {
+    el("text", { x: x(v), y: H - 10, "text-anchor": "middle", class: "eixo-texto" }, s).textContent = num(v, 2);
+  }
+  const larg = (x(1.01) - x(1.0)) - 2;
+  const total = dados.reduce((a, d) => a + d[1], 0);
+  for (const [v, n] of dados) {
+    const h = Math.max(1, H - m.b - y(n));
+    const r = Math.min(3, larg / 2, h);
+    const x0 = x(v) - larg / 2, yTop = y(n);
+    const p = `M${x0},${H - m.b} V${yTop + r} Q${x0},${yTop} ${x0 + r},${yTop} H${x0 + larg - r} Q${x0 + larg},${yTop} ${x0 + larg},${yTop + r} V${H - m.b} Z`;
+    const alvo = el("rect", { x: x(v) - 0.5 * (x(1.01) - x(1.0)), y: m.t, width: x(1.01) - x(1.0), height: H - m.t - m.b, class: "alvo", tabindex: 0 }, s);
+    const barra = el("path", { d: p, class: "barra-v" + (fonte === "outras" ? " outras" : "") }, s);
+    const info = (ev) => { barra.classList.add("ativa"); mostrar(metros(v), [`${n.toLocaleString("pt-BR")} jogadores`, `${num(100 * n / total, 1)}% desta fonte`], ev); };
+    alvo.addEventListener("pointermove", info);
+    alvo.addEventListener("pointerleave", () => { barra.classList.remove("ativa"); esconder(); });
+    alvo.addEventListener("focus", () => { const b = alvo.getBoundingClientRect(); info({ clientX: b.x + b.width / 2, clientY: b.y + 40 }); });
+    alvo.addEventListener("blur", () => { barra.classList.remove("ativa"); esconder(); });
+  }
+  if (fonte === "espn") {
+    el("text", { x: x(1.79), y: y(470), "text-anchor": "middle", class: "rotulo-dado" }, s).textContent = "1,79: vazio";
+    el("line", { x1: x(1.79), x2: x(1.79), y1: y(455), y2: y(5), stroke: "var(--texto-3)", "stroke-dasharray": "2 3" }, s);
+  }
+  document.getElementById("legenda-alturas").textContent = fonte === "espn"
+    ? "Jogadores com altura da ESPN (3.049), por valor. Barras de 1 cm: os vazios entre elas são as alturas que a grade de polegadas não tem. 1,75 e 1,78 m somam 30% dos jogadores."
+    : "Jogadores com altura de outras fontes (403), por valor, na mesma escala de 1 cm. Aqui quase todos os centímetros aparecem. O eixo vertical vai só até 30.";
+}
+document.querySelectorAll("[data-fonte]").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("[data-fonte]").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+  graficoAlturas(b.dataset.fonte);
+}));
+graficoAlturas("espn");
+
+// ---------- 06: cobertura por temporada ----------
+function graficoCobertura() {
+  const box = document.getElementById("grafico-cobertura");
+  box.replaceChildren();
+  const W = largura(box), H = W < 500 ? 240 : 280, m = { t: 16, r: 50, b: 30, l: 44 };
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Cobertura de altura por temporada, versões 1 e 2" }, box);
+  const anos = D.cobertura.map((d) => d[0]);
+  const x = (a) => m.l + (a - 2016) / 9 * (W - m.l - m.r);
+  const y = (p) => H - m.b - (p - 70) / 30 * (H - m.t - m.b);
+  for (let p = 70; p <= 100; p += 10) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(p), y2: y(p), class: p === 70 ? "linha-base" : "grade-linha" }, s);
+    el("text", { x: m.l - 6, y: y(p) + 4, "text-anchor": "end", class: "eixo-texto" }, s).textContent = p + "%";
+  }
+  for (const a of anos) el("text", { x: x(a), y: H - 10, "text-anchor": "middle", class: "eixo-texto" }, s).textContent = W < 500 ? "'" + String(a).slice(2) : a;
+  for (const [a, n, c1, c2] of D.cobertura) {
+    const p1 = 100 * c1 / n, p2 = 100 * c2 / n;
+    el("line", { x1: x(a), x2: x(a), y1: y(p1), y2: y(p2), class: "ligacao" }, s);
+    el("circle", { cx: x(a), cy: y(p1), r: 5, class: "ponto v1" }, s);
+    el("circle", { cx: x(a), cy: y(p2), r: 5, class: "ponto v2" }, s);
+    const alvo = el("rect", { x: x(a) - 22, y: m.t, width: 44, height: H - m.t - m.b, class: "alvo", tabindex: 0 }, s);
+    const info = (ev) => mostrar(String(a), [`Versão 1: ${num(p1, 1)}%`, `Versão 2: ${num(p2, 1)}%`, `${n} linhas de elenco`], ev);
+    alvo.addEventListener("pointermove", info);
+    alvo.addEventListener("pointerleave", esconder);
+    alvo.addEventListener("focus", () => { const b = alvo.getBoundingClientRect(); info({ clientX: b.x + b.width / 2, clientY: b.y + 40 }); });
+    alvo.addEventListener("blur", esconder);
+  }
+  const ult = D.cobertura[9];
+  el("text", { x: x(2025) + 10, y: y(100 * ult[3] / ult[1]) + 4, class: "rotulo-dado" }, s).textContent = num(100 * ult[3] / ult[1], 1) + "%";
+  el("text", { x: x(2025) + 10, y: y(100 * ult[2] / ult[1]) + 4, class: "rotulo-dado" }, s).textContent = num(100 * ult[2] / ult[1], 1) + "%";
+}
+graficoCobertura();
+
+(function () {
+
+  const t = document.createElement("table");
+  t.innerHTML = "<thead><tr><th>temporada</th><th>linhas</th><th>versão 1</th><th>versão 2</th></tr></thead>";
+  const tb = document.createElement("tbody");
+  let tn = 0, t1 = 0, t2 = 0;
+  for (const [a, n, c1, c2] of D.cobertura) {
+    tn += n; t1 += c1; t2 += c2;
+    tb.insertAdjacentHTML("beforeend", `<tr><td>${a}</td><td>${n}</td><td>${num(100 * c1 / n, 1)}%</td><td>${num(100 * c2 / n, 1)}%</td></tr>`);
+  }
+  tb.insertAdjacentHTML("beforeend", `<tr><td><strong>total</strong></td><td>${tn.toLocaleString("pt-BR")}</td><td>${num(100 * t1 / tn, 1)}%</td><td>${num(100 * t2 / tn, 1)}%</td></tr>`);
+  t.appendChild(tb);
+  document.getElementById("tabela-cobertura").appendChild(t);
+})();
+
+// ---------- 07: jogadores por fonte ----------
+(function () {
+  const box = document.getElementById("barras-fontes");
+  const max = Math.max(...D.fontes.map((f) => f[1]));
+  for (const [nome, n, obs] of D.fontes) {
+    const linha = document.createElement("div"); linha.className = "barra";
+    const rot = document.createElement("span"); rot.textContent = nome;
+    if (obs) { const sm = document.createElement("small"); sm.textContent = obs; rot.appendChild(sm); }
+    const trilho = document.createElement("div"); trilho.className = "barra-trilho";
+    const fill = document.createElement("div"); fill.className = "barra-fill" + (nome === "Sem altura" ? " vazio" : "");
+    fill.style.width = (80 * n / max) + "%";
+    const val = document.createElement("span"); val.className = "barra-valor"; val.textContent = n; val.style.left = (80 * n / max) + "%";
+    trilho.append(fill, val); linha.append(rot, trilho); box.appendChild(linha);
+  }
+})();
+
+// ---------- 07: altura média por posição ----------
+function graficoPosicao() {
+  const box = document.getElementById("grafico-posicao");
+  box.replaceChildren();
+  const W = largura(box), H = 210, m = { t: 10, r: 20, b: 30, l: W < 500 ? 96 : 112 };
+  const s = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Altura média por posição, ESPN e outras fontes" }, box);
+  const x = (v) => m.l + (v - 1.76) / (1.94 - 1.76) * (W - m.l - m.r);
+  const linhaH = (H - m.t - m.b) / D.posicao.length;
+  const passoX = W < 500 ? 0.04 : 0.02;
+  for (let v = 1.76; v <= 1.9401; v += passoX) {
+    el("line", { x1: x(v), x2: x(v), y1: m.t, y2: H - m.b, class: "grade-linha" }, s);
+    el("text", { x: x(v), y: H - 10, "text-anchor": "middle", class: "eixo-texto" }, s).textContent = num(v, 2);
+  }
+  D.posicao.forEach(([pos, [n1, a1], [n2, a2]], i) => {
+    const cy = m.t + linhaH * (i + 0.5);
+    el("text", { x: m.l - 12, y: cy + 4, "text-anchor": "end", style: "font-size:12px;fill:var(--texto)" }, s).textContent = pos;
+    el("line", { x1: x(a1), x2: x(a2), y1: cy, y2: cy, class: "ligacao" }, s);
+    el("circle", { cx: x(a1), cy, r: 6, class: "ponto espn" }, s);
+    el("circle", { cx: x(a2), cy, r: 6, class: "ponto outras" }, s);
+    const alvo = el("rect", { x: m.l, y: cy - linhaH / 2, width: W - m.l - m.r, height: linhaH, class: "alvo", tabindex: 0 }, s);
+    const info = (ev) => mostrar(pos, [`ESPN: ${metros(a1)} (${n1} jogadores)`, `Outras: ${metros(a2)} (${n2} jogadores)`, `Diferença: ${num(100 * (a2 - a1), 1)} cm`], ev);
+    alvo.addEventListener("pointermove", info);
+    alvo.addEventListener("pointerleave", esconder);
+    alvo.addEventListener("focus", () => { const b = alvo.getBoundingClientRect(); info({ clientX: b.x + 60, clientY: b.y + b.height }); });
+    alvo.addEventListener("blur", esconder);
+  });
+}
+graficoPosicao();
+
+// Os gráficos são redesenhados na largura real, para o texto não encolher no celular.
+let larguraAnterior = innerWidth;
+addEventListener("resize", () => {
+  if (innerWidth === larguraAnterior) return;
+  larguraAnterior = innerWidth;
+  graficoAlturas(document.querySelector('[data-fonte][aria-pressed="true"]').dataset.fonte);
+  graficoCobertura();
+  graficoPosicao();
+});
+// ---------- destaque de sintaxe dos trechos de código ----------
+(function () {
+  const PALAVRAS = {
+    sql: "SELECT FROM WHERE GROUP BY HAVING ORDER DESC ASC AS AND OR NOT IS NULL JOIN LEFT ON USING DISTINCT",
+    python: "assert in is None not and or if else for def return",
+    sparql: "SELECT WHERE VALUES OPTIONAL FILTER",
+  };
+  const FUNCOES = { sql: "COUNT ABS ROUND AVG", python: "len", sparql: "" };
+  const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  for (const code of document.querySelectorAll("pre code[data-lang]")) {
+    const lang = code.dataset.lang;
+    const fonte = code.textContent;
+    let html = "";
+    if (lang === "url") {
+      html = esc(fonte).replace(/&lt;\w+&gt;/g, (m) => `<span class="tk-numero">${m}</span>`);
+    } else {
+      const coment = lang === "sql" ? "--[^\\n]*" : "#[^\\n]*";
+      const palavras = new Set(PALAVRAS[lang].split(" "));
+      const funcoes = new Set(FUNCOES[lang].split(" ").filter(Boolean));
+      const re = new RegExp(`(${coment})|(f?"[^"\\n]*"|'[^'\\n]*')|(\\b\\d+(?:\\.\\d+)?\\b)|([?A-Za-z_][\\w:]*)|([\\s\\S])`, "g");
+      let m;
+      while ((m = re.exec(fonte))) {
+        const [t, c, str, n, w] = m;
+        if (c) html += `<span class="tk-comentario">${esc(t)}</span>`;
+        else if (str) html += `<span class="tk-texto">${esc(t)}</span>`;
+        else if (n) html += `<span class="tk-numero">${t}</span>`;
+        else if (w && palavras.has(w)) html += `<span class="tk-palavra">${t}</span>`;
+        else if (w && (funcoes.has(w) || /^wdt:/.test(w))) html += `<span class="tk-funcao">${esc(t)}</span>`;
+        else html += esc(t);
+      }
+    }
+    code.innerHTML = html;
+  }
+})();
+</script>
+
+</body>
+</html>
