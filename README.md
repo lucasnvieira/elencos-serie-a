@@ -2,7 +2,7 @@
 
 **Veja o projeto:** https://lucasnvieira.github.io/elencos-serie-a/
 
-Relatório de coleta e limpeza de dados: como montei uma base com os elencos do Campeonato Brasileiro Série A de 2016 a 2025, da coleta nas páginas de elenco da ESPN Brasil até a busca, em outras fontes, pelas alturas que faltavam.
+Relatório de coleta e limpeza de dados: como montei uma base com os elencos do Campeonato Brasileiro Série A de 2016 a 2025, da coleta nas páginas de elenco da ESPN Brasil até a busca, em outras fontes, pelas alturas (o dado que guiou a ideia da análise final) dos jogadores.
 
 ## O que o relatório mostra
 
